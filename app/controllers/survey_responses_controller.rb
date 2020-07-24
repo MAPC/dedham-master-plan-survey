@@ -1,10 +1,12 @@
+require 'twilio-ruby'
+
 class SurveyResponsesController < ApplicationController
-  before_action :set_survey_response, only: [:show, :update, :destroy]
+  include Webhookable
+  before_action :set_survey_response, only: [:show, :update, :destroy, :sms]
 
   # GET /survey_responses
   def index
     @survey_responses = SurveyResponse.all
-
     render json: @survey_responses
   end
 
@@ -18,18 +20,18 @@ class SurveyResponsesController < ApplicationController
     @survey_response = SurveyResponse.new(survey_response_params)
 
     if @survey_response.save
-      render json: @survey_response, status: :created, location: @survey_response
+      render_twiml question(@survey_response), status: :created
     else
-      render json: @survey_response.errors, status: :unprocessable_entity
+      render_twiml twiml_response('Sorry, there was an error. Please try again tomorrow.')
     end
   end
 
   # PATCH/PUT /survey_responses/1
   def update
     if survey_response_params.has_key?(:from) && @survey_response.update(survey_response_params)
-      render json: @survey_response
+      render_twiml question(@survey_response)
     else
-      render json: @survey_response.errors, status: :unprocessable_entity
+      render_twiml twiml_response('Sorry, there was an error. Please try again tomorrow.')
     end
   end
 
@@ -38,15 +40,53 @@ class SurveyResponsesController < ApplicationController
     @survey_response.destroy
   end
 
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_survey_response
-      # TODO: Update based on phone number that twilio sends.
-      @survey_response = SurveyResponse.find(params[:id])
+  def sms
+    if @survey_response.blank?
+      create
+    else
+      update
     end
+  end
 
-    # Only allow a trusted parameter "white list" through.
-    def survey_response_params
-      params.require(:survey_response).permit(:from, :question1, :question2, :optout)
+  private
+
+  def set_survey_response
+    @survey_response = params[:id].present? ? SurveyResponse.find(params[:id]) :
+      SurveyResponse.find_by_from(params[:From])
+  end
+
+  def survey_response_params
+    twilio_to_rails_params = ActionController::Parameters.new(
+      {
+        survey_response: {
+          from: params.require(:From)
+        },
+        controller: params.require(:controller),
+        action: params.require(:action)
+      }
+    ).permit!
+
+    twilio_to_rails_params['survey_response'].merge!(assign_param(params['Body']).to_hash)
+  end
+
+  def assign_param(body)
+    survey_response = SurveyResponse.find_by_from(params[:From])
+    if survey_response.blank?
+      { question1: body }
+    elsif survey_response.question2.blank?
+      { question2: body }
+    else
+      { optout: true }
     end
+  end
+
+  def question(survey_response)
+    if survey_response.question2.present?
+      twiml_response('Thanks for completing our survey!')
+    elsif survey_response.question1.present?
+      twiml_response('What do you want to improve about Dedham?')
+    else
+      twiml_response('What do you love about Dedham?')
+    end
+  end
 end

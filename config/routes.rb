@@ -1,4 +1,4 @@
 Rails.application.routes.draw do
   resources :survey_responses
-  # For details on the DSL available within this file, see https://guides.rubyonrails.org/routing.html
+  post 'survey_responses/sms' => 'survey_responses#sms'
 end

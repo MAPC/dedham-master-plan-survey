@@ -12,12 +12,29 @@ require 'rails_helper'
 # sticking to rails and rspec-rails APIs to keep things simple and stable.
 
 RSpec.describe "/survey_responses", type: :request do
-  let(:valid_attributes) {
+  let(:valid_params) {
     {
-      from: '7128675309',
-      question1: 'A first response.',
-      question2: 'A second response.',
-      optout: false
+      ToCountry: 'US',
+      ToState: 'MA',
+      SmsMessageSid: 'SM9b9e794b2424870ff1179e612b5304e7',
+      NumMedia: '0',
+      ToCity: 'LEXINGTON',
+      FromZip: '06120',
+      SmsSid: 'SM9b9e794b2424870ff1179e612b5304e7',
+      FromState: 'CT',
+      SmsStatus: 'received',
+      FromCity: 'HARTFORD',
+      Body: 'Test Message 3',
+      FromCountry: 'US',
+      To: '+17812306399',
+      ToZip: '02420',
+      NumSegments: '1',
+      MessageSid: 'SM9b9e794b2424870ff1179e612b5304e7',
+      AccountSid: 'AC307bc5e294391823e1a1cce343e86084',
+      From: '+18608838042',
+      ApiVersion: '2010-04-01',
+      controller: 'survey_responses',
+      action: 'sms'
     }
   }
 
@@ -31,9 +48,27 @@ RSpec.describe "/survey_responses", type: :request do
     {}
   }
 
+  describe "POST /sms" do
+    it "creates a new SurveyResponse if the person never responded" do
+      expect {
+        post survey_responses_sms_url,
+          params: valid_params, headers: valid_headers, as: :json
+        }.to change(SurveyResponse, :count).by(1)
+    end
+
+    it "updates the existing SurveyResponse if the person responded before" do
+      survey_response = SurveyResponse.create! FactoryBot.attributes_for(:survey_response, from: '+18608838042')
+      post survey_responses_sms_url,
+        params: valid_params, headers: valid_headers, as: :json
+      survey_response.reload
+      expect(survey_response).to have_attributes(question2: 'Test Message 3')
+    end
+  end
+
+
   describe "GET /index" do
     it "renders a successful response" do
-      SurveyResponse.create! valid_attributes
+      SurveyResponse.create! FactoryBot.attributes_for(:survey_response)
       get survey_responses_url, headers: valid_headers, as: :json
       expect(response).to be_successful
     end
@@ -41,7 +76,7 @@ RSpec.describe "/survey_responses", type: :request do
 
   describe "GET /show" do
     it "renders a successful response" do
-      survey_response = SurveyResponse.create! valid_attributes
+      survey_response = SurveyResponse.create! FactoryBot.attributes_for(:survey_response)
       get survey_response_url(survey_response), as: :json
       expect(response).to be_successful
     end
@@ -52,15 +87,15 @@ RSpec.describe "/survey_responses", type: :request do
       it "creates a new SurveyResponse" do
         expect {
           post survey_responses_url,
-               params: { survey_response: valid_attributes }, headers: valid_headers, as: :json
+               params: valid_params, headers: valid_headers, as: :json
         }.to change(SurveyResponse, :count).by(1)
       end
 
       it "renders a JSON response with the new survey_response" do
         post survey_responses_url,
-             params: { survey_response: valid_attributes }, headers: valid_headers, as: :json
+             params: valid_params, headers: valid_headers, as: :json
         expect(response).to have_http_status(:created)
-        expect(response.content_type).to match(a_string_including("application/json"))
+        expect(response.content_type).to match(a_string_including("text/xml; charset=utf-8"))
       end
     end
 
@@ -68,13 +103,13 @@ RSpec.describe "/survey_responses", type: :request do
       it "does not create a new SurveyResponse" do
         expect {
           post survey_responses_url,
-               params: { survey_response: invalid_attributes }, as: :json
+               params: invalid_attributes, as: :json
         }.to change(SurveyResponse, :count).by(0)
       end
 
       it "renders a JSON response with errors for the new survey_response" do
         post survey_responses_url,
-             params: { survey_response: invalid_attributes }, headers: valid_headers, as: :json
+             params: invalid_attributes, headers: valid_headers, as: :json
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.content_type).to match(a_string_including("application/json"))
       end
@@ -85,33 +120,33 @@ RSpec.describe "/survey_responses", type: :request do
     context "with valid parameters" do
       let(:new_attributes) {
         {
-          from: '7728675309',
-          question2: 'Different response.'
+          From: '7728675309',
+          Body: 'Different response.'
         }
       }
 
       it "updates the requested survey_response" do
-        survey_response = SurveyResponse.create! valid_attributes
+        survey_response = SurveyResponse.create! FactoryBot.attributes_for(:survey_response)
         patch survey_response_url(survey_response),
-              params: { survey_response: new_attributes }, headers: valid_headers, as: :json
+              params: new_attributes, headers: valid_headers, as: :json
         survey_response.reload
         skip("Add assertions for updated state")
       end
 
-      it "renders a JSON response with the survey_response" do
-        survey_response = SurveyResponse.create! valid_attributes
+      it "renders a TwiML response with the survey_response" do
+        survey_response = SurveyResponse.create! FactoryBot.attributes_for(:survey_response)
         patch survey_response_url(survey_response),
-              params: { survey_response: new_attributes }, headers: valid_headers, as: :json
+              params: new_attributes, headers: valid_headers, as: :json
         expect(response).to have_http_status(:ok)
-        expect(response.content_type).to match(a_string_including("application/json"))
+        expect(response.content_type).to match(a_string_including("text/xml; charset=utf-8"))
       end
     end
 
     context "with invalid parameters" do
       it "renders a JSON response with errors for the survey_response" do
-        survey_response = SurveyResponse.create! valid_attributes
+        survey_response = SurveyResponse.create! FactoryBot.attributes_for(:survey_response)
         patch survey_response_url(survey_response),
-              params: { survey_response: invalid_attributes }, headers: valid_headers, as: :json
+              params: invalid_attributes, headers: valid_headers, as: :json
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.content_type).to match(a_string_including("application/json"))
       end
@@ -120,7 +155,7 @@ RSpec.describe "/survey_responses", type: :request do
 
   describe "DELETE /destroy" do
     it "destroys the requested survey_response" do
-      survey_response = SurveyResponse.create! valid_attributes
+      survey_response = SurveyResponse.create! FactoryBot.attributes_for(:survey_response)
       expect {
         delete survey_response_url(survey_response), headers: valid_headers, as: :json
       }.to change(SurveyResponse, :count).by(-1)
