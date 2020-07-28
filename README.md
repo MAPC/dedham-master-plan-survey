@@ -1,24 +1,7 @@
-# README
+# Dedham Master Plan Survey Tool
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This tool is an API that receives webhooks from a Twilio SMS endpoint to survey residents of Dedham about their master plan.
 
-Things you may want to cover:
+Documentaiton for Ruby and Twilio is on the [Twilio website](https://www.twilio.com/docs/sms/quickstart/ruby).
 
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+After deploying this application you need to set the webhook URL at Twilio to https://[DEPLOYMENT_URL]/survey_responses/sms in the [Twilio Console](https://www.twilio.com/console/phone-numbers/).
