@@ -72,6 +72,8 @@ class SurveyResponsesController < ApplicationController
   def assign_param(body)
     survey_response = SurveyResponse.find_by_from(params[:From])
     if survey_response.blank?
+      { }
+    elsif survey_response.question1.blank?
       { question1: body }
     elsif survey_response.question2.blank?
       { question2: body }
