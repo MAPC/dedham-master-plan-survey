@@ -77,7 +77,7 @@ class SurveyResponsesController < ApplicationController
       }
     ).permit!
 
-    twilio_to_rails_params['survey_response'].merge!(assign_param(params['Body']).to_hash)
+    twilio_to_rails_params['survey_response'].merge!(assign_param(params['Body'].downcase.strip).to_hash)
   end
 
   def assign_param(body)
