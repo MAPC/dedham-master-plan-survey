@@ -11,8 +11,8 @@ class SurveyResponsesController < ApplicationController
   }
 
   CONTENT = {
-    disclaimer: 'The legal stuff: By sharing a response, you are agreeing to let the Metropolitan Area Planning Council (MAPC) and the Town of Dedham use your submission in the Designing Dedham 2030 master plan and in any publications hereafter',
-    optin: 'Thanks for sharing your Dedham story! Do you want to receive updates about Designing Dedham 2030 and stay connected? Text 1 for yes, 2 for no.'
+    disclaimer: "The legal stuff: By sharing a response, you are agreeing to let the Metropolitan Area Planning Council (MAPC) and the Town of Dedham use your submission in the Designing Dedham 2030 master plan and in any publications hereafter.\n\n Thank you for your interest in Designing Dedham! We are excited to connect with you",
+    optout: 'Thanks for sharing your Dedham story! Do you want to receive updates about Designing Dedham 2030 and stay connected? Text 1 for yes, 2 for no.'
   }
 
   # GET /survey_responses
@@ -82,22 +82,25 @@ class SurveyResponsesController < ApplicationController
 
   def assign_param(body)
     survey_response = SurveyResponse.find_by_from(params[:From])
-    if survey_response.blank?
-      { question: body }
-    elsif survey_response.question1.blank?
-      { question1: body }
+    if survey_response.blank? || survey_response.current_question.blank?
+      { current_question: body }
+    elsif survey_response.send(survey_response.current_question).blank?
+      response = { survey_response.current_question => body }
+      response.merge!({ current_question: nil }) if survey_response.optout.present?
+      return response
     else
-      { optout: body.to_i == 1 ? false : true }
+      { optout: body.to_i == 1 ? false : true,
+        current_question: nil }
     end
   end
 
   def question(survey_response)
-    if !survey_response.optout.nil?
-      twiml_response('Thanks for completing our survey!')
-    elsif survey_response.question1.present?
-      twiml_response(CONTENT[:optin])
+    if survey_response.current_question.present? && survey_response.send(survey_response.current_question).blank?
+      twiml_response("#{CONTENT[:disclaimer]}\n\n#{QUESTIONS[survey_response.current_question.to_sym]}")
+    elsif survey_response.optout.nil?
+      twiml_response(CONTENT[:optout])
     else
-      twiml_response("#{CONTENT[:disclaimer]}\n\n#{QUESTIONS[survey_response.question.to_sym]}")
+      twiml_response('Thank you for sharing your story')
     end
   end
 end
